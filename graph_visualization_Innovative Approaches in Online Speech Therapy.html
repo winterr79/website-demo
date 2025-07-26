@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 1000px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#FF0000", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_root", "label": "[L0 Root]\nInnovative Approaches in Onlin...", "shape": "dot", "title": "Innovative Approaches in Online Speech Therapy.pdf"}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_0_a1cc5304", "label": "[L5 Title]\nInnovative Approaches in Onlin...", "shape": "dot", "title": "Innovative Approaches in Online Speech Therapy"}, {"color": "#00FF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_1_d42ab0dc", "label": "[L99 NarrativeText]\nPrepared by: Miza Mariyam Desi...", "shape": "dot", "title": "Prepared by: Miza Mariyam Designation: Head \u2013 Clinical Operations, Sphecho Date: June 2025"}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_2_2c476ac6", "label": "[L1 Title]\n1. Introduction...", "shape": "dot", "title": "1. Introduction"}, {"color": "#00FF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_3_cd9d821a", "label": "[L99 NarrativeText]\nAt Sphecho, we continuously se...", "shape": "dot", "title": "At Sphecho, we continuously seek to innovate and enhance our therapy offerings, using technology and creativity to better serve our clients and improve outcomes. This report consolidates a comprehensive list of innovative online tools, digital apps, activity-based materials, and product-based engagement strategies that are currently in use or recommended for further implementation. These practices aim to support our therapists and families in delivering consistent, high-quality therapy sessions while promoting client retention and satisfaction."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_4_c6c116e4", "label": "[L1 Title]\n2. Activity-Based Online Thera...", "shape": "dot", "title": "2. Activity-Based Online Therapy Approaches"}, {"color": "#00FF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_5_75c9c9e9", "label": "[L99 NarrativeText]\nSphecho therapists actively in...", "shape": "dot", "title": "Sphecho therapists actively incorporate engaging, play-based activities into therapy sessions for children with various speech and language challenges. These activities make tele-practice more interactive, developmentally appropriate, and motivating for children."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_6_6c74aebf", "label": "[L5 Title]\nSpeech Sound Disorders (Articu...", "shape": "dot", "title": "Speech Sound Disorders (Articulation)"}, {"color": "#FFA500", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_7_a9addce3", "label": "[L99 Table]\n\u003ctable\u003e\u003cthead\u003e\u003ctr\u003e\u003cth\u003eActivity...", "shape": "dot", "title": "\u003ctable\u003e\u003cthead\u003e\u003ctr\u003e\u003cth\u003eActivity\u003c/th\u003e\u003cth\u003eDescription\u003c/th\u003e\u003c/tr\u003e\u003c/thead\u003e\u003ctbody\u003e\u003ctr\u003e\u003ctd\u003eArticulation Bowling\u003c/td\u003e\u003ctd\u003ePicture cards with target sounds are \u201cbowled over\u201d after correct articulation.\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003eTreasure Map\u003c/td\u003e\u003ctd\u003eFollow a map with sound-based challenges at each stop.\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003eMagic Microphone\u003c/td\u003e\u003ctd\u003eUse a prop microphone to motivate articulation practice.\u003c/td\u003e\u003c/tr\u003e\u003c/tbody\u003e\u003c/table\u003e"}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_8_d89b1c46", "label": "[L5 Title]\nStuttering (Fluency Disorders)...", "shape": "dot", "title": "Stuttering (Fluency Disorders)"}, {"color": "#FFA500", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_9_289cdb6a", "label": "[L99 Table]\n\u003ctable\u003e\u003cthead\u003e\u003ctr\u003e\u003cth\u003eActivity...", "shape": "dot", "title": "\u003ctable\u003e\u003cthead\u003e\u003ctr\u003e\u003cth\u003eActivity\u003c/th\u003e\u003cth\u003eDescription\u003c/th\u003e\u003c/tr\u003e\u003c/thead\u003e\u003ctbody\u003e\u003ctr\u003e\u003ctd\u003eLily Pad Activity\u003c/td\u003e\u003ctd\u003ePractice smooth speech while \u201cjumping\u201d across lily pads with target phrases.\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003eRed Light, Green Light\u003c/td\u003e\u003ctd\u003eAdapted game: Green = speak fluently, Red = stop, Yellow = pause/think.\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003eRocket Countdown\u003c/td\u003e\u003ctd\u003eUse prolonged countdowns and slow speech to promote easy onsets.\u003c/td\u003e\u003c/tr\u003e\u003c/tbody\u003e\u003c/table\u003e"}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_10_528f35de", "label": "[L5 Title]\nExpressive Language Delay...", "shape": "dot", "title": "Expressive Language Delay"}, {"color": "#FFA500", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_11_63ae0015", "label": "[L99 Table]\n\u003ctable\u003e\u003cthead\u003e\u003ctr\u003e\u003cth\u003eActivity...", "shape": "dot", "title": "\u003ctable\u003e\u003cthead\u003e\u003ctr\u003e\u003cth\u003eActivity\u003c/th\u003e\u003cth\u003eDescription\u003c/th\u003e\u003c/tr\u003e\u003c/thead\u003e\u003ctbody\u003e\u003ctr\u003e\u003ctd\u003ePicture Description Game\u003c/td\u003e\u003ctd\u003eUse pictures to elicit sentences, sequencing, and WH-questions.\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003eAnimal Charades\u003c/td\u003e\u003ctd\u003eCombine movement with language (e.g., \u201cThe lion is roaring\u201d).\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003eWhat\u0027s in the Bag?\u003c/td\u003e\u003ctd\u003eDescribe and label hidden objects.\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003eInteractive Storybook Reading\u003c/td\u003e\u003ctd\u003eUse repetitive books to build prediction, sequencing, and expression.\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003eBlock Building / Lego Talk\u003c/td\u003e\u003ctd\u003eTarget adjectives, spatial concepts, and sentence construction through play.\u003c/td\u003e\u003c/tr\u003e\u003c/tbody\u003e\u003c/table\u003e"}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_12_cc95cc9a", "label": "[L1 Title]\n3. Digital Tools and Apps Curr...", "shape": "dot", "title": "3. Digital Tools and Apps Currently in Use at Sphecho"}, {"color": "#00FF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_13_c207ba43", "label": "[L99 NarrativeText]\nSphecho already integrates a n...", "shape": "dot", "title": "Sphecho already integrates a number of widely accepted digital tools to enhance engagement and progress tracking."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_14_a673159d", "label": "[L5 Title]\nCurrently Used Platforms...", "shape": "dot", "title": "Currently Used Platforms"}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_15_903ece3b", "label": "[L99 ListItem]\n\u2022 Boom Cards: Widely used for ...", "shape": "dot", "title": "\u2022 Boom Cards: Widely used for customized digital decks targeting articulation, language, and fluency."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_16_a1c91cd9", "label": "[L99 ListItem]\n\u2022 Teachers Pay Teachers: Offer...", "shape": "dot", "title": "\u2022 Teachers Pay Teachers: Offers a large bank of downloadable therapy materials created by practicing SLPs, used across Sphecho sessions."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_17_a5998116", "label": "[L99 ListItem]\n\u2022 ABCya: Supports early learne...", "shape": "dot", "title": "\u2022 ABCya: Supports early learners through interactive vocabulary and language games suitable for various therapy goals."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_18_d7755dae", "label": "[L99 ListItem]\n\u2022 Vooks: Combines storytelling...", "shape": "dot", "title": "\u2022 Vooks: Combines storytelling with visual prompts to reinforce literacy, vocabulary, and comprehension."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_19_0c5743b0", "label": "[L1 Title]\n4. Additional Therapy Apps for...", "shape": "dot", "title": "4. Additional Therapy Apps for Consideration and Expansion"}, {"color": "#00FF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_20_340f3fb5", "label": "[L99 NarrativeText]\nWhile many tools are already i...", "shape": "dot", "title": "While many tools are already in use, the following apps offer additional value and can be considered for integration where relevant."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_21_e70a6eff", "label": "[L5 Title]\nArticulation-Focused Apps...", "shape": "dot", "title": "Articulation-Focused Apps"}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_22_be7b58de", "label": "[L99 ListItem]\n\u2022 Articulation Station Hive: P...", "shape": "dot", "title": "\u2022 Articulation Station Hive: Provides structured articulation practice at multiple levels."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_23_5b986469", "label": "[L99 ListItem]\n\u2022 ArtikPix: Flashcard-based ar...", "shape": "dot", "title": "\u2022 ArtikPix: Flashcard-based articulation with data tracking."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_24_52b0031b", "label": "[L99 ListItem]\n\u2022 Speech Tutor: Visual modelin...", "shape": "dot", "title": "\u2022 Speech Tutor: Visual modeling of sound production via animation."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_25_13123272", "label": "[L99 ListItem]\n\u2022 Speech Blubs: Engages childr...", "shape": "dot", "title": "\u2022 Speech Blubs: Engages children using peer-modeling videos and gamified speech practice."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_26_e0c1940b", "label": "[L99 ListItem]\n\u2022 Reach Speech: Created by an ...", "shape": "dot", "title": "\u2022 Reach Speech: Created by an SLP, this app mirrors natural speech development stages."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_27_a504ddd8", "label": "[L5 Title]\nLanguage \u0026 Comprehension Apps...", "shape": "dot", "title": "Language \u0026 Comprehension Apps"}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_28_27740bc8", "label": "[L99 ListItem]\n\u2022 Splingo: Uses reward-based g...", "shape": "dot", "title": "\u2022 Splingo: Uses reward-based games to support vocabulary and language understanding."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_29_a7dc85c1", "label": "[L99 ListItem]\n\u2022 SpeakEasy: Home Speech Thera...", "shape": "dot", "title": "\u2022 SpeakEasy: Home Speech Therapy: Offers parents evidence-based support tools across language and social goals."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_30_0e3f9d1b", "label": "[L99 ListItem]\n\u2022 Epic \u0026 Little Stories: Digit...", "shape": "dot", "title": "\u2022 Epic \u0026 Little Stories: Digital libraries that combine storytelling with speech targets, sequencing, and recall."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_31_c19844e9", "label": "[L5 Title]\nAAC Tools...", "shape": "dot", "title": "AAC Tools"}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_32_e22252e0", "label": "[L99 ListItem]\n\u2022 Proloquo2Go and CoughDrop: H...", "shape": "dot", "title": "\u2022 Proloquo2Go and CoughDrop: Highly customizable AAC apps for children with complex communication needs, useful for non-verbal or minimally verbal clients."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_33_9d125af1", "label": "[L1 Title]\n5. Therapist-Use Platforms and...", "shape": "dot", "title": "5. Therapist-Use Platforms and Interactive Tools"}, {"color": "#00FF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_34_77bcd287", "label": "[L99 NarrativeText]\nIn addition to client-facing t...", "shape": "dot", "title": "In addition to client-facing tools, platforms supporting therapist productivity and teletherapy delivery are critical."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_35_59d1ec81", "label": "[L99 ListItem]\n\u2022 Pink Cat Games: Allows SLPs ...", "shape": "dot", "title": "\u2022 Pink Cat Games: Allows SLPs to create custom games for therapy goals."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_36_d0defd9a", "label": "[L99 ListItem]\n\u2022 Coviu: A telehealth platform...", "shape": "dot", "title": "\u2022 Coviu: A telehealth platform with assessment tools and real-time collaboration."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_37_afe61664", "label": "[L99 ListItem]\n\u2022 SLP Cloud (Suggested for ado...", "shape": "dot", "title": "\u2022 SLP Cloud (Suggested for adoption): Offers data-driven therapy planning, session notes, progress monitoring, and homework sharing \u2014 all in one place."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_38_86dea607", "label": "[L99 ListItem]\n\u2022 Walnut Therapy (Suggested fo...", "shape": "dot", "title": "\u2022 Walnut Therapy (Suggested for adoption): A comprehensive therapy management and goal-tracking platform tailored for pediatric speech therapists, integrating structured learning paths and session reports."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_39_80055cea", "label": "[L1 Title]\n6. Product-Based Innovations t...", "shape": "dot", "title": "6. Product-Based Innovations to Boost Retention"}, {"color": "#00FF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_40_83b0af8c", "label": "[L99 NarrativeText]\nBeyond technology, hands-on ma...", "shape": "dot", "title": "Beyond technology, hands-on materials and parent-friendly tools can drive long-term engagement, especially post-onboarding."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_41_446399c8", "label": "[L5 Title]\nCurrent and Proposed Add-Ons...", "shape": "dot", "title": "Current and Proposed Add-Ons"}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_42_3bccae80", "label": "[L99 ListItem]\n\u2022 Sensory Starter Kits: Curate...", "shape": "dot", "title": "\u2022 Sensory Starter Kits: Curated kits based on the child\u0027s sensory needs, with refresh cycles every 3\u20136 months."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_43_eb771277", "label": "[L99 ListItem]\n\u2022 Toy Subscription Boxes: Home...", "shape": "dot", "title": "\u2022 Toy Subscription Boxes: Home-delivered kits aligned with therapy goals such as motor skills or calming routines."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_44_c13c2a80", "label": "[L99 ListItem]\n\u2022 Speech Play Cards: Flashcard...", "shape": "dot", "title": "\u2022 Speech Play Cards: Flashcards with prompts like action words, WH-questions, and imitation cues."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_45_ec91bba6", "label": "[L99 ListItem]\n\u2022 Sound Journals: Personalized...", "shape": "dot", "title": "\u2022 Sound Journals: Personalized activity books for children and parents to record new words and milestones."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_46_94f3cf6e", "label": "[L99 ListItem]\n\u2022 Build-Your-Own Kit Tool: A r...", "shape": "dot", "title": "\u2022 Build-Your-Own Kit Tool: A recommendation engine that suggests toy bundles based on diagnosis and play preferences."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_47_276ffe7a", "label": "[L99 ListItem]\n\u2022 Parent Workshops: Online ses...", "shape": "dot", "title": "\u2022 Parent Workshops: Online sessions on using toys and speech techniques at home, co- led by Sphecho SLPs and OTs."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_48_35bef0f5", "label": "[L1 Title]\n7. Recommendations...", "shape": "dot", "title": "7. Recommendations"}, {"color": "#00FF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_49_5d2e7b9c", "label": "[L99 NarrativeText]\nTo strengthen therapy impact a...", "shape": "dot", "title": "To strengthen therapy impact and improve retention, Sphecho may consider the following steps:"}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_50_2a35f379", "label": "[L99 ListItem]\n\u2022 Continue leveraging Boom Car...", "shape": "dot", "title": "\u2022 Continue leveraging Boom Cards, ABCya, Vooks, and Teachers Pay Teachers, while standardizing usage across all therapists."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_51_64254d56", "label": "[L99 ListItem]\n\u2022 Pilot the use of SLP Cloud o...", "shape": "dot", "title": "\u2022 Pilot the use of SLP Cloud or Walnut Therapy to streamline planning, tracking, and documentation."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_52_d0871d48", "label": "[L99 ListItem]\n\u2022 Expand product-based engagem...", "shape": "dot", "title": "\u2022 Expand product-based engagement (starter kits, journals, and toy lending programs) to reinforce carryover at home."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_53_b38c1ef8", "label": "[L99 ListItem]\n\u2022 Introduce structured parent ...", "shape": "dot", "title": "\u2022 Introduce structured parent education modules as part of the onboarding journey or between renewals."}, {"color": "#FFFF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_54_5fd7931b", "label": "[L99 ListItem]\n\u2022 Maintain a digital library o...", "shape": "dot", "title": "\u2022 Maintain a digital library of app guides and demo videos for families, hosted on the WISE App or an internal portal."}, {"color": "#0000FF", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_55_6f253cc5", "label": "[L1 Title]\n8. Conclusion...", "shape": "dot", "title": "8. Conclusion"}, {"color": "#00FF00", "id": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_56_0fbfed69", "label": "[L99 NarrativeText]\nSphecho is already leading in ...", "shape": "dot", "title": "Sphecho is already leading in integrating tech-forward, child-centered solutions for online speech therapy. By refining app usage, adopting new therapist platforms, and offering tangible parent- facing tools, we can further enrich our client experience. These innovative approaches will not only elevate therapy quality but also foster stronger retention, better home involvement, and long-term client satisfaction."}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_root", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_0_a1cc5304"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_root", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_2_2c476ac6"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_root", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_4_c6c116e4"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_root", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_12_cc95cc9a"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_root", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_19_0c5743b0"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_root", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_33_9d125af1"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_root", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_39_80055cea"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_root", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_48_35bef0f5"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_root", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_55_6f253cc5"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_0_a1cc5304", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_1_d42ab0dc"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_2_2c476ac6", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_3_cd9d821a"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_4_c6c116e4", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_5_75c9c9e9"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_4_c6c116e4", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_6_6c74aebf"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_4_c6c116e4", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_8_d89b1c46"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_4_c6c116e4", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_10_528f35de"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_6_6c74aebf", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_7_a9addce3"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_8_d89b1c46", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_9_289cdb6a"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_10_528f35de", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_11_63ae0015"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_12_cc95cc9a", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_13_c207ba43"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_12_cc95cc9a", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_14_a673159d"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_14_a673159d", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_15_903ece3b"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_14_a673159d", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_16_a1c91cd9"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_14_a673159d", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_17_a5998116"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_14_a673159d", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_18_d7755dae"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_19_0c5743b0", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_20_340f3fb5"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_19_0c5743b0", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_21_e70a6eff"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_19_0c5743b0", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_27_a504ddd8"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_19_0c5743b0", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_31_c19844e9"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_21_e70a6eff", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_22_be7b58de"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_21_e70a6eff", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_23_5b986469"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_21_e70a6eff", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_24_52b0031b"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_21_e70a6eff", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_25_13123272"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_21_e70a6eff", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_26_e0c1940b"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_27_a504ddd8", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_28_27740bc8"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_27_a504ddd8", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_29_a7dc85c1"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_27_a504ddd8", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_30_0e3f9d1b"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_31_c19844e9", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_32_e22252e0"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_33_9d125af1", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_34_77bcd287"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_33_9d125af1", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_35_59d1ec81"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_33_9d125af1", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_36_d0defd9a"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_33_9d125af1", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_37_afe61664"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_33_9d125af1", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_38_86dea607"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_39_80055cea", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_40_83b0af8c"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_39_80055cea", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_41_446399c8"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_41_446399c8", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_42_3bccae80"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_41_446399c8", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_43_eb771277"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_41_446399c8", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_44_c13c2a80"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_41_446399c8", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_45_ec91bba6"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_41_446399c8", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_46_94f3cf6e"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_41_446399c8", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_47_276ffe7a"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_48_35bef0f5", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_49_5d2e7b9c"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_48_35bef0f5", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_50_2a35f379"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_48_35bef0f5", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_51_64254d56"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_48_35bef0f5", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_52_d0871d48"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_48_35bef0f5", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_53_b38c1ef8"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_48_35bef0f5", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_54_5fd7931b"}, {"arrows": "to", "from": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_55_6f253cc5", "to": "C:\\Users\\haris\\one_random_project\\data\\Innovative Approaches in Online Speech Therapy.pdf_node_56_0fbfed69"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
